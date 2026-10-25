@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Parking Guidance Center</title>
+<style>
+:root{--top:#151b26;--side:#1d2532;--bg:#eceff3;--panel:#fff;--ink:#1c2430;--mute:#697384;--line:#dbe0e7;--accent:#2f6bff;--ok:#18a058;--warn:#e8a200;--bad:#d92d20;--sign:#3b1f1d;--led:#42ff80;--ledoff:rgba(66,255,128,.09)}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.45 "Segoe UI","Leelawadee UI",Tahoma,sans-serif;display:flex;flex-direction:column}
+header{height:48px;flex:none;background:var(--top);color:#e8ecf2;display:flex;align-items:center;gap:28px;padding:0 16px}
+.logo{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;white-space:nowrap}
+.logo i{width:22px;height:22px;border-radius:5px;background:#e60012;display:grid;place-items:center;font:700 13px/1 Arial;color:#fff;font-style:normal}
+.logo small{font-weight:400;color:#8f9bb0;font-size:12px}
+nav{display:flex;height:100%}nav button{background:none;border:0;color:#9aa6ba;padding:0 18px;font:inherit;font-size:14px;cursor:pointer;border-bottom:3px solid transparent;height:100%}
+nav button:hover{color:#fff}nav button.on{color:#fff;background:#202a39;border-color:var(--accent)}
+.hr{margin-left:auto;display:flex;gap:18px;align-items:center;font-size:12px;color:#9aa6ba}#ws.ok{color:#5be08d}
+.page{display:none;flex:1;min-height:0}.page.on{display:block}
+.wrap{padding:16px;max-width:1400px;margin:0 auto;height:100%;overflow:auto}
+h3{font-size:13px;margin:0 0 10px;font-weight:600}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px;margin-bottom:14px}
+/* monitor */
+.mon{display:grid;grid-template-columns:230px 1fr 290px;height:100%}
+.tree,.rt{background:var(--panel);overflow:auto;padding:12px}.tree{border-right:1px solid var(--line)}.rt{border-left:1px solid var(--line)}
+.tf{margin:10px 0 2px;font-weight:600;color:var(--mute);font-size:12px}.tf small{float:right;font-weight:400}
+.tn{padding:6px 10px;border-radius:4px;cursor:pointer;display:flex;gap:8px;align-items:center}.tn:hover{background:#f1f3f7}.tn.on{background:#e6eeff;color:#1646c8}
+.dot{width:8px;height:8px;border-radius:50%;background:#aaa;flex:none;display:inline-block}.dot.ok{background:var(--ok)}.dot.bad{background:var(--bad)}.dot.warn{background:var(--warn)}
+.center{display:flex;flex-direction:column;min-width:0;background:#10151d}
+.tb{height:38px;flex:none;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px;padding:0 12px}
+.tb span{color:var(--mute);margin-right:6px}.tb button{border:1px solid var(--line);background:#fff;border-radius:4px;padding:3px 11px;cursor:pointer;font:inherit}.tb button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+#wall{flex:1;min-height:0;display:grid;gap:3px;padding:3px;grid-auto-rows:1fr}
+.win{position:relative;background:#000;overflow:hidden;border:1px solid #243044}.win img{width:100%;height:100%;object-fit:contain;display:block}
+.win.empty{display:grid;place-items:center;color:#4b586c}
+.wt{position:absolute;left:0;right:0;top:0;display:flex;gap:8px;align-items:center;padding:4px 10px;background:linear-gradient(#000c,#0000);color:#fff;font-size:12px}.wt em{margin-left:auto;font-style:normal;opacity:.8}
+#feed div{padding:5px 0;border-bottom:1px solid var(--line);font-size:12px}#feed .in b{color:var(--bad)}#feed .out b{color:var(--accent)}
+.rt .mini{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+/* LED sign */
+.sign{background:var(--sign);border:2px solid #1d0e0d;border-radius:10px;padding:10px 14px;color:#fff;transition:box-shadow .2s}
+.sign .top{display:flex;align-items:baseline;gap:10px}.sign .nm{font-size:26px;font-weight:700}.sign .sub{font-size:12px;color:#d9c9c6}
+.sign .badge{margin-left:auto;font-weight:700;opacity:0;color:#ffd37a;transition:opacity .4s}.sign .badge.show{opacity:1}
+.sign svg{width:100%;height:84px;display:block}.sign .seg{fill:var(--ledoff)}.sign .seg.on{fill:var(--led);filter:drop-shadow(0 0 3px var(--led))}
+.sign.low .nm{color:#ffd37a}.sign.full .nm{color:#ff8a7a}.sign.flash{box-shadow:0 0 0 3px var(--warn)}
+.sm{padding:6px 10px}.sm .nm{font-size:17px}.sm svg{height:50px}
+/* overview */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px;border-left:4px solid var(--accent)}
+.kpi b{display:block;font-size:30px;line-height:1.1;font-variant-numeric:tabular-nums}.kpi span{color:var(--mute)}
+.two{display:grid;grid-template-columns:1.4fr 1fr;gap:14px}@media(max-width:1000px){.two,.kpis{grid-template-columns:1fr 1fr}.mon{grid-template-columns:1fr}.tree,.rt{display:none}}
+.floors{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.bar{display:grid;grid-template-columns:50px 1fr 70px;gap:10px;align-items:center;margin-bottom:12px}.bar div.t{height:12px;background:#e8ebf0;border-radius:6px;overflow:hidden}.bar div.t i{display:block;height:100%}
+/* tables */
+table{width:100%;border-collapse:collapse}th{background:#f3f5f8;text-align:left;font-weight:600}td,th{padding:8px 10px;border-bottom:1px solid var(--line)}tr:hover td{background:#fafbfd}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:4px;padding:6px 14px;font:inherit;cursor:pointer}.btn.sec{background:#fff;color:var(--ink);border:1px solid var(--line)}.btn.del{background:var(--bad)}
+.tools{display:flex;gap:8px;margin-bottom:12px;align-items:center}.tools .sp{flex:1}
+.tabs2{display:flex;gap:2px;margin-bottom:12px;border-bottom:1px solid var(--line)}.tabs2 button{background:none;border:0;padding:8px 18px;font:inherit;cursor:pointer;color:var(--mute);border-bottom:2px solid transparent}.tabs2 button.on{color:var(--accent);border-color:var(--accent)}
+input,select{padding:6px 8px;border:1px solid var(--line);border-radius:4px;font:inherit;background:#fff;width:100%}td input{width:100px}
+label{display:block;font-size:12px;color:var(--mute)}.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+dialog{border:0;border-radius:8px;padding:0;width:min(1060px,96vw);max-height:94vh;overflow:auto}dialog::backdrop{background:#0a0e1499}
+.dh{background:var(--top);color:#fff;padding:12px 18px;font-size:14px;display:flex}.dh button{margin-left:auto;background:none;border:0;color:#fff;font-size:18px;cursor:pointer}
+.db{padding:16px;display:grid;grid-template-columns:1fr 1.2fr;gap:18px}@media(max-width:860px){.db{grid-template-columns:1fr}}
+.cv{position:relative;background:#111;line-height:0;touch-action:none}.cv img{width:100%;min-height:220px;display:block}.cv canvas{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair}
+.df{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+code{background:#f1f3f7;padding:1px 6px;border-radius:3px;font-size:12px}
+#toast{position:fixed;right:18px;bottom:18px;background:var(--top);color:#fff;padding:10px 16px;border-radius:6px;opacity:0;transition:opacity .3s;pointer-events:none}#toast.show{opacity:1}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* LED devices / rules / telegram */
+.alnum{display:inline-block;background:#140707;border:1px solid #2a0d0b;border-radius:4px;padding:3px 10px;font:700 18px/1.15 Consolas,"Courier New",monospace;letter-spacing:4px;color:#ff4b3a;text-shadow:0 0 6px #ff4b3a99;white-space:pre;min-width:84px;text-align:center}
+.alnum.off{color:#5c2c27;text-shadow:none}
+.chip{display:inline-flex;align-items:center;gap:5px;background:#f1f3f7;border:1px solid var(--line);border-radius:12px;padding:1px 9px;font-size:12px;margin:2px 4px 2px 0;white-space:nowrap}
+.chip.p{background:#fdecea;color:#b42318;border-color:#f6c9c4}.chip.m{background:#e8f0ff;color:#1646c8;border-color:#c9d8ff}
+.rule{display:grid;grid-template-columns:1fr 1.4fr 34px;gap:8px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:5px;margin-bottom:6px;background:#fafbfd}
+.rule .leds{grid-column:1/-1;font-size:11px;color:var(--mute)}.rule .x{background:#fff;border:1px solid var(--line);border-radius:4px;height:30px;cursor:pointer;color:var(--bad)}
+.note{background:#f6f8fb;border:1px solid var(--line);border-radius:4px;padding:8px 10px;font-size:12px;color:var(--mute)}
+.note.warn{background:#fff7e6;border-color:#f5d38a;color:#7a5200}
+.res{font-size:12px;margin-top:6px;min-height:18px}.res.ok{color:var(--ok)}.res.bad{color:var(--bad)}
+.btn.sm{padding:3px 10px;font-size:12px}.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}.row>*{flex:1;min-width:120px}.row>.btn{flex:none}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:12px}.kv b{font-weight:600}.kv span{color:var(--mute)}
+.sig{display:inline-flex;gap:2px;align-items:flex-end;height:12px;vertical-align:middle}.sig i{width:3px;background:#d0d5dd;border-radius:1px}.sig i.on{background:var(--ok)}
+.tgw{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media(max-width:900px){.tgw{grid-template-columns:1fr}}
+.tgbg{background:#cfe0ea;border-radius:8px;padding:14px;min-height:200px}
+.tgb{background:#fff;border-radius:10px 10px 10px 2px;padding:9px 12px;max-width:440px;white-space:pre-wrap;font-size:13px;line-height:1.5;box-shadow:0 1px 1px #0002;margin-bottom:10px}
+.tgb code{background:none;padding:0}
+details.help{margin-top:12px}details.help summary{cursor:pointer;color:var(--accent);font-weight:600}
+ol.steps{margin:8px 0;padding-left:20px}ol.steps li{margin-bottom:4px}
+.new td{background:#fffbea}
+</style></head><body>
+<header>
+  <div class="logo"><i>P</i>Parking Guidance <small>Center</small></div>
+  <nav><button data-p="mon" class="on">ภาพสด</button><button data-p="ov">ภาพรวมที่จอด</button><button data-p="rec">บันทึกเหตุการณ์</button><button data-p="dev">อุปกรณ์ / ชั้น</button></nav>
+  <div class="hr"><span id="ws">กำลังเชื่อมต่อ…</span><span id="clock"></span></div>
+</header>
+
+<section id="p_mon" class="page on"><div class="mon">
+  <aside class="tree"><h3>อุปกรณ์</h3><div id="tree"></div></aside>
+  <div class="center"><div class="tb"><span>รูปแบบหน้าต่าง</span><button data-l="1">1</button><button data-l="4" class="on">2×2</button><button data-l="9">3×3</button></div><div id="wall"></div></div>
+  <aside class="rt"><h3>ที่ว่างแบบเรียลไทม์</h3><div class="mini" id="mini"></div><h3>เหตุการณ์ล่าสุด</h3><div id="feed"><div class="ph" style="color:var(--mute)">รอเหตุการณ์นับรถ…</div></div></aside>
+</div></section>
+
+<section id="p_ov" class="page"><div class="wrap">
+  <div class="kpis" id="kpis"></div>
+  <div class="two"><div class="panel"><h3>ป้ายที่จอดว่างแต่ละชั้น (เหมือนป้ายหน้างาน)</h3><div class="floors" id="signs"></div></div>
+  <div class="panel"><h3>อัตราการใช้งานที่จอด</h3><div id="bars"></div></div></div>
+  <div class="panel"><h3>รถเข้า / ออก วันนี้ รายชั่วโมง</h3><div id="chart"></div></div>
+</div></section>
+
+<section id="p_rec" class="page"><div class="wrap"><div class="panel">
+  <div class="tools"><select id="r_floor" style="width:150px"></select><select id="r_dir" style="width:150px"><option value="">เข้าและออก</option><option value="in">รถเข้า</option><option value="out">รถออก</option></select><button class="btn sec" id="r_go">ค้นหา</button><span class="sp"></span><button class="btn sec" id="r_csv">ส่งออก CSV</button></div>
+  <table id="rtab"></table>
+</div></div></section>
+
+<section id="p_dev" class="page"><div class="wrap">
+  <div class="tabs2"><button data-s="cams" class="on">กล้อง</button><button data-s="flr">ชั้น / ที่จอด</button><button data-s="led">ป้าย LED (ESP32)</button><button data-s="tg">แจ้งเตือน Telegram</button></div>
+  <div class="panel sp_" id="s_cams"><div class="tools"><span class="sp"></span><button class="btn" id="newcam">+ เพิ่มกล้อง</button></div><table id="ctab"></table></div>
+  <div class="panel sp_" id="s_flr" hidden><div class="tools"><span class="sp"></span><button class="btn" id="addfloor">+ เพิ่มชั้น</button></div><table id="ftab"></table></div>
+  <div class="panel sp_" id="s_led" hidden>
+    <div class="tools"><span id="ledsum" style="color:var(--mute)"></span><span class="sp"></span></div>
+    <table id="ltab"></table>
+    <details class="help" id="ledhelp"><summary>ติดตั้งป้าย LED ใหม่ (ESP32 + HT16K33)</summary>
+      <div class="tgw" style="margin-top:10px">
+        <div><ol class="steps">
+          <li>ต่อสาย: <b>(ESP32)VIN→(LED)VCC</b>, <b>(ESP32)GND→(LED)GND</b>, <b>(ESP32)D21→(LED)SDA</b>, <b>(ESP32)D22→(LED)SCL</b></li>
+          <li>Arduino IDE ติดตั้งไลบรารี <code>WebSockets</code> (Markus Sattler), <code>ArduinoJson</code> 7.x, <code>Adafruit LED Backpack</code></li>
+          <li>กรอก WiFi ด้านขวาแล้วกด “ดาวน์โหลดเฟิร์มแวร์” ระบบใส่ IP เซิร์ฟเวอร์และรหัสอุปกรณ์ให้อัตโนมัติ</li>
+          <li>อัปโหลดลงบอร์ด (Board: ESP32 Dev Module) เฟิร์มแวร์เดียวใช้ได้ทุกป้าย</li>
+          <li>เปิดเครื่อง ป้ายจะขึ้นในตารางนี้เอง (แถวสีเหลือง) กด “ตั้งค่า” เพื่อตั้งชื่อและเลือกชั้น</li></ol>
+          <div class="note">จอแสดง <b>WIFI</b> = กำลังต่อ WiFi · <b>CONN</b> = กำลังต่อเซิร์ฟเวอร์ · มีจุดหลักขวาสุด = หลุดชั่วคราว · <b>----</b> = ยังไม่กำหนดชั้น หรือหลุดเกิน 60 วินาที</div></div>
+        <div><div class="g">
+          <label>WiFi SSID<input id="fw_ssid" autocomplete="off"></label><label>WiFi Password<input id="fw_pass" type="password" autocomplete="new-password"></label>
+          <label>IP เซิร์ฟเวอร์ (ใส่ในเฟิร์มแวร์)<input id="fw_host" readonly></label>
+          <label>รหัสอุปกรณ์ (Device token)<input id="s_devtoken" placeholder="เว้นว่าง = ไม่ตรวจสอบ"></label></div>
+          <div class="tools" style="margin-top:10px"><button class="btn sec" id="savetoken">บันทึกรหัสอุปกรณ์</button><span class="sp"></span><button class="btn" id="dlfw">ดาวน์โหลดเฟิร์มแวร์</button></div>
+          <div class="note">รหัสอุปกรณ์ช่วยกันไม่ให้อุปกรณ์อื่นในเครือข่ายเชื่อมเข้ามาได้ ถ้าเปลี่ยนรหัส ต้องแฟลชเฟิร์มแวร์ใหม่ทุกป้าย</div></div>
+      </div></details>
+  </div>
+  <div class="panel sp_" id="s_tg" hidden><div class="tgw">
+    <div>
+      <h3>ตั้งค่าการแจ้งเตือน</h3>
+      <label style="margin-bottom:10px"><input id="tg_enabled" type="checkbox" style="width:auto"> เปิดการแจ้งเตือน Telegram</label>
+      <div class="g">
+        <label>Bot Token<input id="tg_token" type="password" autocomplete="new-password"></label>
+        <label>Chat ID (หลายห้องคั่นด้วย ,)<input id="tg_chat" placeholder="-1001234567890"></label>
+        <label>รูปแบบการส่ง<select id="tg_mode">
+          <option value="event">ส่งข้อความใหม่ทุกเหตุการณ์ + สถานะทุกชั้น</option>
+          <option value="live">ข้อความสถานะเดียว ปักหมุด อัปเดตเรียลไทม์</option>
+          <option value="both">ทั้งสองแบบ</option></select></label>
+        <label>รวมเหตุการณ์ที่เกิดภายใน (วินาที)<input id="tg_merge" type="number" min="0" max="60" step="1"></label>
+      </div>
+      <label style="margin-top:10px"><input id="tg_silent" type="checkbox" style="width:auto"> ส่งแบบไม่มีเสียงแจ้งเตือน</label>
+      <div class="tools" style="margin-top:14px"><button class="btn" id="tg_save">บันทึก</button><button class="btn sec" id="tg_test">ส่งข้อความทดสอบ</button><button class="btn sec" id="tg_find">ค้นหา Chat ID</button></div>
+      <div class="res" id="tg_res"></div>
+      <div class="note" id="tg_hint">“รวมเหตุการณ์” ช่วยไม่ให้ข้อความถี่เกินไปช่วงรถเยอะ เช่น 3 วินาที = รถที่ผ่านติดกันภายใน 3 วินาที รวมเป็นข้อความเดียว (Telegram จำกัด ~20 ข้อความ/นาที ต่อกลุ่ม)</div>
+      <details class="help"><summary>วิธีสร้างบอทและหา Chat ID</summary><ol class="steps">
+        <li>ใน Telegram คุยกับ <b>@BotFather</b> พิมพ์ <code>/newbot</code> ตั้งชื่อ แล้วคัดลอก Token มาใส่ด้านบน กดบันทึก</li>
+        <li>เพิ่มบอทเข้ากลุ่มที่ต้องการ (หรือทักบอทโดยตรง) แล้วพิมพ์ <code>/start</code> ในกลุ่ม</li>
+        <li>กด “ค้นหา Chat ID” แล้วเลือกห้อง หรือคัดลอกเลขที่บอทตอบกลับมา</li>
+        <li>โหมดข้อความสถานะเดียว: ให้บอทเป็นแอดมินกลุ่ม เพื่อปักหมุดข้อความได้</li>
+        <li>ในห้องที่ตั้งไว้ พิมพ์ <code>/status</code> เพื่อดูสถานะทุกชั้นได้ทุกเมื่อ</li></ol></details>
+    </div>
+    <div><h3>ตัวอย่างข้อความ</h3><div class="tgbg" id="tg_prev"></div></div>
+  </div></div>
+</div></section>
+
+<dialog id="dlg">
+  <div class="dh"><span id="dtitle">ตั้งค่ากล้อง</span><button id="dclose" aria-label="ปิด">✕</button></div>
+  <div class="db">
+    <div><h3>การเชื่อมต่อ</h3><div class="g">
+      <label>ชื่อกล้อง<input id="f_name"></label><label>IP กล้อง<input id="f_ip"></label>
+      <label>Port SDK (Hikvision ปกติ 8000)<input id="f_port" type="number"></label><label>Username<input id="f_username"></label>
+      <label>Password<input id="f_password" type="password"></label><label>Channel (101 หลัก / 102 รอง)<input id="f_channel"></label>
+      <label>RTSP URL เอง (เว้นว่าง = ใช้ HCNetSDK)<input id="f_rtsp_url"></label><label>ติดตั้งอยู่ที่ชั้น<select id="f_floor_id"></select></label></div>
+      <h3 style="margin-top:16px">ผลเมื่อรถผ่านเส้น A→B <small style="font-weight:400;color:var(--mute)">· ถ้ารถวิ่งสวน B→A ระบบกลับเครื่องหมายให้อัตโนมัติ</small></h3>
+      <div class="tools" style="margin-bottom:8px;flex-wrap:wrap"><span style="color:var(--mute)">เทมเพลต:</span>
+        <button class="btn sec sm" data-tpl="in">ทางเข้าชั้นนี้</button><button class="btn sec sm" data-tpl="out">ทางออกชั้นนี้</button><button class="btn sec sm" data-tpl="ramp">ทางลาด ชั้นนี้ → ชั้นถัดไป</button></div>
+      <div id="rules"></div>
+      <button class="btn sec sm" id="addrule">+ เพิ่มชั้นที่ได้รับผล</button>
+      <div class="note" id="rprev" style="margin-top:8px"></div>
+      <div class="tools" style="margin-top:8px"><span style="color:var(--mute)">ทดสอบทั้งระบบ:</span><button class="btn sec sm" id="simAB">จำลองรถผ่าน A→B</button><button class="btn sec sm" id="simBA">จำลองรถผ่าน B→A</button></div>
+      <h3 style="margin-top:16px">เงื่อนไขการนับ</h3><div class="g">
+      <label>ทิศที่นับ<select id="f_mode"><option value="both">ทั้งสองทิศ</option><option value="AB">เฉพาะ A→B</option><option value="BA">เฉพาะ B→A</option></select></label>
+      <label>ความมั่นใจขั้นต่ำ AI (0.1–0.9)<input id="f_conf" type="number" step="0.05" min="0.1" max="0.9"></label>
+      <label>โซนกันสั่นรอบเส้น<input id="f_margin" type="number" step="0.005" min="0" max="0.1"></label></div>
+      <label style="margin-top:12px"><input id="f_enabled" type="checkbox" style="width:auto"> เปิดใช้งานกล้องนี้</label></div>
+    <div><h3>ตีเส้นนับรถ <small style="font-weight:400;color:var(--mute)">ลากจุดเหลืองให้ขวางทางลาด ลูกศรฟ้าคือทิศ A→B</small></h3>
+      <div class="cv" id="cv"><img id="snap" alt=""><canvas id="cnv"></canvas></div>
+      <div class="tools" style="margin-top:10px"><button class="btn sec" id="reshot">ถ่ายภาพใหม่</button><button class="btn sec" id="flip">สลับทิศ A↔B</button></div></div>
+  </div>
+  <div class="df"><button class="btn del" id="delcam">ลบกล้อง</button><span style="flex:1"></span><button class="btn sec" id="dcancel">ปิด</button><button class="btn" id="savecam">บันทึก</button></div>
+</dialog>
+<dialog id="ddlg" style="width:min(900px,96vw)">
+  <div class="dh"><span id="ddtitle">ตั้งค่าป้าย LED</span><button id="ddclose" aria-label="ปิด">✕</button></div>
+  <div class="db">
+    <div><h3>ข้อมูลป้าย</h3><div class="g">
+      <label>ชื่อป้าย<input id="d_name" placeholder="เช่น ป้ายทางขึ้น ชั้น 1"></label>
+      <label>แสดงผลของชั้น<select id="d_floor_id"></select></label>
+      <label>ค่าที่แสดง<select id="d_mode"><option value="free">ที่จอดว่าง (รถเข้า −1)</option><option value="occupied">จำนวนรถในชั้น (รถเข้า +1)</option></select></label>
+      <label>ความสว่าง <b id="d_bv"></b><input id="d_brightness" type="range" min="0" max="15" style="padding:0"></label></div>
+      <label style="margin-top:10px"><input id="d_full_text" type="checkbox" style="width:auto"> แสดง “FULL” เมื่อชั้นเต็ม</label>
+      <h3 style="margin-top:16px">กล้องที่ส่งผลต่อป้ายนี้</h3><div id="d_cams"></div>
+      <h3 style="margin-top:16px">สถานะอุปกรณ์</h3><div class="kv" id="d_info"></div></div>
+    <div><h3>ทดสอบ</h3>
+      <div class="note" style="margin-bottom:10px">ค่าที่ป้ายแสดงอยู่ตอนนี้ <span class="alnum" id="d_now" style="margin-left:8px"></span></div>
+      <div class="tools"><button class="btn sec" id="d_ping">ทดสอบการเชื่อมต่อ</button><button class="btn sec" id="d_ident">กะพริบระบุตัว</button></div>
+      <div class="res" id="d_pres"></div>
+      <div class="row" style="margin-top:8px"><label>ข้อความทดสอบ (สูงสุด 4 หลัก)<input id="d_ttext" value="8888" maxlength="8"></label><label style="max-width:110px">แสดงนาน (วินาที)<input id="d_tsec" type="number" value="5" min="1" max="60"></label><button class="btn" id="d_tsend">ส่งค่าทดสอบ</button></div>
+      <div class="tools" style="margin-top:8px;flex-wrap:wrap"><span style="color:var(--mute)">ด่วน:</span><button class="btn sec sm" data-tt="8888">8888</button><button class="btn sec sm" data-tt="  12">12</button><button class="btn sec sm" data-tt="FULL">FULL</button><button class="btn sec sm" data-tt="TEST">TEST</button></div>
+      <div class="res" id="d_tres"></div>
+      <div class="note">ข้อความทดสอบจะแสดงชั่วคราว แล้วป้ายกลับไปแสดงค่าจริงเอง</div></div>
+  </div>
+  <div class="df"><button class="btn del" id="d_del">ลบป้าย</button><span style="flex:1"></span><button class="btn sec" id="d_cancel">ปิด</button><button class="btn" id="d_save">บันทึก</button></div>
+</dialog>
+<div id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const api=(u,m='GET',b)=>fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined}).then(r=>r.ok?r.json():r.text().then(t=>{let x=t;try{x=JSON.parse(t).detail||t}catch(e){}throw new Error(typeof x=='string'?x:JSON.stringify(x))}));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let floors=[],cams=[],devs=[],evs=[],sel=null,dsel=null,rules=[],settings={},line={x1:.1,y1:.5,x2:.9,y2:.5},layout=4,focus=null,lastKey='';
+const fl=id=>(floors.find(f=>f.id==id)||{}).name||'-',cn=id=>(cams.find(c=>c.id==id)||{}).name||'-';
+const stc=s=>s.startsWith('online')?'ok':/^(offline|disabled|error|model)/.test(s)?'bad':'warn';
+const stt=s=>({online:'ออนไลน์',offline:'ออฟไลน์',disabled:'ปิดใช้งาน',reconnecting:'กำลังต่อใหม่',starting:'กำลังเริ่ม','loading model':'กำลังโหลด AI'}[s]||s);
+const tm=t=>new Date(t*1000).toLocaleTimeString('th-TH',{hour12:false});
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
+setInterval(()=>$('#clock').textContent=new Date().toLocaleString('th-TH',{hour12:false}),1000);
+$$('nav button').forEach(b=>b.onclick=()=>{$$('nav button').forEach(x=>x.classList.toggle('on',x==b));$$('.page').forEach(p=>p.classList.toggle('on',p.id=='p_'+b.dataset.p));if(b.dataset.p=='rec')loadRec();if(b.dataset.p=='ov')renderOv()});
+$$('.tabs2 button').forEach(b=>b.onclick=()=>{$$('.tabs2 button').forEach(x=>x.classList.toggle('on',x==b));$$('.sp_').forEach(p=>p.hidden=p.id!='s_'+b.dataset.s);if(b.dataset.s=='tg')loadPreview()});
+
+/* 7-segment */
+const SEG={0:'abcdef',1:'bc',2:'abdeg',3:'abcdg',4:'bcfg',5:'acdfg',6:'acdefg',7:'abc',8:'abcdefg',9:'abcdfg'};
+const POLY={a:'5,2 27,2 23,6 9,6',b:'28,4 28,26 24,23 24,8',c:'28,30 28,52 24,48 24,33',d:'5,54 27,54 23,50 9,50',e:'4,30 4,52 8,48 8,33',f:'4,4 4,26 8,23 8,8',g:'5,28 9,25 23,25 27,28 23,31 9,31'};
+const sevenSeg=n=>{const s=String(Math.min(999,Math.max(0,n))).padStart(3,' ');return `<svg viewBox="0 0 108 56" aria-label="ว่าง ${n}">${[...s].map((ch,i)=>`<g transform="translate(${i*38},0)">${Object.keys(POLY).map(k=>`<polygon class="seg ${(SEG[ch]||'').includes(k)?'on':''}" points="${POLY[k]}"/>`).join('')}</g>`).join('')}</svg>`};
+const sign=(f,c)=>`<div class="sign ${c?'sm':''} ${f.free==0?'full':f.free<=3?'low':''}" data-fid="${f.id}"><div class="top"><span class="nm">${f.name}</span><span class="sub">มีรถ ${f.occupied}/${f.total}</span><span class="badge"></span></div>${sevenSeg(f.free)}</div>`;
+function flash(d){d.changes.forEach(c=>$$(`[data-fid="${c.floor_id}"]`).forEach(s=>{s.classList.add('flash');const b=s.querySelector('.badge');b.textContent=(c.delta>0?'−':'+')+Math.abs(c.delta);b.classList.add('show');setTimeout(()=>{s.classList.remove('flash');b.classList.remove('show')},1000)}))}
+
+/* monitor */
+function renderTree(){const un=cams.filter(c=>!floors.some(f=>f.id==c.floor_id)),row=c=>`<div class="tn ${focus==c.id?'on':''}" data-c="${c.id}"><i class="dot ${stc(c.status)}"></i>${c.name}</div>`;
+ $('#tree').innerHTML=`<div class="tn ${!focus?'on':''}" data-c="">ทุกกล้อง</div>`+floors.map(f=>`<div class="tf">${f.name}<small>ว่าง ${f.free}</small></div>`+cams.filter(c=>c.floor_id==f.id).map(row).join('')).join('')+(un.length?'<div class="tf">ยังไม่กำหนดชั้น</div>'+un.map(row).join(''):'')}
+$('#tree').onclick=e=>{const t=e.target.closest('.tn');if(!t)return;focus=t.dataset.c?+t.dataset.c:null;renderTree();renderWall()};
+$$('.tb button').forEach(b=>b.onclick=()=>{layout=+b.dataset.l;focus=null;$$('.tb button').forEach(x=>x.classList.toggle('on',x==b));renderTree();renderWall()});
+function renderWall(){const on=cams.filter(c=>c.enabled),n=focus?1:layout,list=(focus?on.filter(c=>c.id==focus):on).slice(0,n),key=n+'|'+list.map(c=>c.id).join();
+ if(key==lastKey){updStatus();return}lastKey=key;const w=$('#wall'),cols=Math.round(Math.sqrt(n));w.style.gridTemplateColumns=`repeat(${cols},1fr)`;
+ w.innerHTML=Array.from({length:n},(_,i)=>{const c=list[i];return c?`<div class="win" data-id="${c.id}"><img src="/stream/${c.id}" alt="${c.name}"><div class="wt"><i class="dot" id="wd${c.id}"></i>${c.name} · ชั้น ${fl(c.floor_id)}<em id="wf${c.id}"></em></div></div>`:'<div class="win empty">ไม่มีภาพ</div>'}).join('');
+ $$('.win[data-id]').forEach(e=>e.ondblclick=()=>{focus=focus?null:+e.dataset.id;renderTree();renderWall()});updStatus()}
+function updStatus(){cams.forEach(c=>{const d=$('#wd'+c.id),f=$('#wf'+c.id);if(d)d.className='dot '+stc(c.status);if(f)f.textContent=`${stt(c.status)} · ภาพ ${c.cam_fps} fps · AI ${c.ai=='ok'?c.fps+' fps':c.ai=='loading'?'กำลังโหลด':'ผิดพลาด'}`})}
+function feed(d){const x=document.createElement('div');x.innerHTML=`${tm(d.ts)} · ${esc(d.camera)} [${esc(d.cls)}]${d.source=='sim'?' <i>(จำลอง)</i>':''}<br>`+d.changes.map(c=>`<span class="${c.delta>0?'in':'out'}">${esc(fl(c.floor_id))} <b>${c.delta>0?'รถเข้า +':'รถออก −'}${Math.abs(c.delta)}</b></span>`).join(' · ');
+ const F=$('#feed'),p=F.querySelector('.ph');if(p)p.remove();F.prepend(x);while(F.children.length>40)F.lastChild.remove()}
+
+/* overview */
+const sum=k=>floors.reduce((a,f)=>a+f[k],0);
+function todayEv(){const d=new Date().setHours(0,0,0,0)/1000;return evs.filter(e=>e.ts>=d)}
+function renderSigns(){$('#signs').innerHTML=floors.map(f=>sign(f)).join('');$('#mini').innerHTML=floors.map(f=>sign(f,1)).join('')}
+function renderOv(){const te=todayEv(),inn=te.filter(e=>e.delta>0).length;
+ $('#kpis').innerHTML=[['ที่จอดว่างทั้งหมด',sum('free'),'#18a058'],['มีรถจอดอยู่',sum('occupied'),'#d92d20'],['รถเข้าวันนี้',inn,'#2f6bff'],['รถออกวันนี้',te.length-inn,'#e8a200']].map(k=>`<div class="kpi" style="border-left-color:${k[2]}"><b>${k[1]}</b><span>${k[0]}</span></div>`).join('');
+ $('#bars').innerHTML=floors.map(f=>{const p=f.total?Math.min(100,Math.round(f.occupied*100/f.total)):0;return `<div class="bar"><b>${f.name}</b><div class="t"><i style="width:${p}%;background:${p>=90?'#d92d20':p>=70?'#e8a200':'#18a058'}"></i></div><span>${p}% · ว่าง ${f.free}</span></div>`}).join('');
+ const h=Array.from({length:24},()=>[0,0]);te.forEach(e=>h[new Date(e.ts*1000).getHours()][e.delta>0?0:1]++);const mx=Math.max(4,...h.flat());
+ let s='<svg viewBox="0 0 760 200" style="width:100%;height:210px">';for(let i=0;i<=4;i++){const y=165-i*35;s+=`<line x1="30" x2="750" y1="${y}" y2="${y}" stroke="#e4e8ee"/><text x="24" y="${y+4}" font-size="10" text-anchor="end" fill="#697384">${Math.round(mx*i/4)}</text>`}
+ h.forEach((v,i)=>{const x=36+i*30;s+=`<rect x="${x}" y="${165-v[0]/mx*140}" width="11" height="${v[0]/mx*140}" fill="#d92d20"/><rect x="${x+12}" y="${165-v[1]/mx*140}" width="11" height="${v[1]/mx*140}" fill="#2f6bff"/>`+(i%3==0?`<text x="${x+11}" y="182" font-size="10" text-anchor="middle" fill="#697384">${String(i).padStart(2,'0')}:00</text>`:'')});
+ $('#chart').innerHTML=s+'<rect x="560" y="192" width="9" height="7" fill="#d92d20"/><text x="574" y="199" font-size="10">รถเข้า</text><rect x="620" y="192" width="9" height="7" fill="#2f6bff"/><text x="634" y="199" font-size="10">รถออก</text></svg>'}
+
+/* records */
+let recRows=[];
+function renderRec(){const ff=$('#r_floor').value,dd=$('#r_dir').value;recRows=evs.filter(e=>(!ff||e.floor_id==ff)&&(!dd||(dd=='in')==(e.delta>0)));
+ $('#rtab').innerHTML='<tr><th>เวลา</th><th>กล้อง</th><th>ชั้น</th><th>เหตุการณ์</th><th>ประเภทรถ</th><th>จำนวนรถในชั้นหลังนับ</th></tr>'+(recRows.slice(0,300).map(e=>`<tr><td>${new Date(e.ts*1000).toLocaleString('th-TH',{hour12:false})}</td><td>${e.cname||cn(e.camera_id)}</td><td>${fl(e.floor_id)}</td><td style="color:${e.delta>0?'#d92d20':'#2f6bff'}">${e.delta>0?'รถเข้า':'รถออก'}</td><td>${e.cls}</td><td>${e.occupied??'-'}</td></tr>`).join('')||'<tr><td colspan="6" style="color:var(--mute)">ยังไม่มีเหตุการณ์</td></tr>')}
+async function loadRec(){evs=await api('/api/events?limit=1000');renderRec();renderOv()}
+$('#r_go').onclick=loadRec;
+$('#r_csv').onclick=()=>{const c='\ufeffเวลา,กล้อง,ชั้น,เหตุการณ์,ประเภท,จำนวนรถหลังนับ\n'+recRows.map(e=>[new Date(e.ts*1000).toLocaleString('th-TH',{hour12:false}),e.cname||cn(e.camera_id),fl(e.floor_id),e.delta>0?'เข้า':'ออก',e.cls,e.occupied??''].join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:'text/csv'}));a.download='parking-events.csv';a.click()};
+
+/* devices */
+const ruleChips=rs=>rs.map(r=>`<span class="chip ${r.delta>0?'p':'m'}">${esc(fl(r.floor_id))} ${r.delta>0?'เข้า +':'ออก −'}${Math.abs(r.delta)}</span>`).join('')||'<span style="color:var(--bad)">ยังไม่กำหนด</span>';
+const ledsOnFloor=fid=>devs.filter(d=>d.floor_id==fid);
+function renderCamTab(){$('#ctab').innerHTML='<tr><th>สถานะ</th><th>ชื่อ</th><th>IP</th><th>ติดตั้งที่</th><th>ผลเมื่อรถผ่าน A→B</th><th>ป้าย LED ที่ได้รับค่า</th><th>โหมดนับ</th><th>FPS</th><th></th></tr>'+(cams.map(c=>{const ls=[...new Set((c.rules||[]).map(r=>r.floor_id))].flatMap(ledsOnFloor);
+ return `<tr><td><i class="dot ${stc(c.status)}"></i> ${stt(c.status)}</td><td><b>${esc(c.name)}</b></td><td>${esc(c.ip||'RTSP เอง')}</td><td>${esc(fl(c.floor_id))}</td><td>${ruleChips(c.rules||[])}</td><td>${ls.map(d=>`<span class="chip"><i class="dot ${d.online?'ok':'bad'}"></i>${esc(d.name)}</span>`).join('')||'<span style="color:var(--mute)">-</span>'}</td><td>${{both:'ทั้งสองทิศ',AB:'A→B',BA:'B→A'}[c.mode]}</td><td>${c.fps}</td><td><button class="btn sec" onclick="pick(${c.id})">ตั้งค่า / ตีเส้น</button></td></tr>`}).join('')||'<tr><td colspan="9" style="color:var(--mute)">ยังไม่มีกล้อง กด “+ เพิ่มกล้อง”</td></tr>')}
+const F=['name','ip','port','username','password','channel','rtsp_url','floor_id','mode','conf','margin'];
+window.pick=id=>{sel=id;const c=id?cams.find(x=>x.id==id):{name:'กล้องใหม่',ip:'',port:8000,username:'admin',password:'',channel:'102',rtsp_url:'',floor_id:(floors[0]||{}).id,mode:'both',conf:.4,margin:.02,enabled:1,x1:.1,y1:.5,x2:.9,y2:.5,rules:floors[0]?[{floor_id:floors[0].id,delta:1}]:[]};
+ $('#dtitle').textContent=id?'ตั้งค่ากล้อง · '+c.name:'เพิ่มกล้องใหม่';$('#f_floor_id').innerHTML=floors.map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('');
+ F.forEach(k=>$('#f_'+k).value=c[k]);$('#f_enabled').checked=!!c.enabled;line={x1:c.x1,y1:c.y1,x2:c.x2,y2:c.y2};$('#delcam').style.visibility=id?'visible':'hidden';
+ rules=(c.rules||[]).map(r=>({...r}));renderRules();
+ if(!$('#dlg').open)$('#dlg').showModal();shot()};
+/* camera -> floor rules (1 กล้อง ส่งผลได้หลายชั้น ตั้ง +/− ได้) */
+function renderRules(){
+ $('#rules').innerHTML=rules.map((r,i)=>{const ls=ledsOnFloor(r.floor_id);return `<div class="rule"><select class="rf" data-i="${i}" aria-label="ชั้น">${floors.map(f=>`<option value="${f.id}" ${f.id==r.floor_id?'selected':''}>${esc(f.name)}</option>`).join('')}</select>
+  <select class="rd" data-i="${i}" aria-label="ผล"><option value="1" ${r.delta>0?'selected':''}>+1 · รถเข้าชั้นนี้</option><option value="-1" ${r.delta<0?'selected':''}>−1 · รถออกจากชั้นนี้</option></select>
+  <button class="x" data-i="${i}" title="ลบ" aria-label="ลบ">✕</button>
+  <div class="leds">ป้าย LED ที่จะได้รับค่า: ${ls.map(d=>`<span class="chip"><i class="dot ${d.online?'ok':'bad'}"></i>${esc(d.name)}</span>`).join('')||'ยังไม่มีป้ายผูกกับชั้นนี้ (ตั้งได้ที่แท็บ ป้าย LED)'}</div></div>`}).join('')
+  ||'<div class="note warn">ยังไม่ได้กำหนด — กล้องจะตรวจจับรถแต่ไม่นับเข้าชั้นใด เลือกเทมเพลต หรือกด “+ เพิ่มชั้นที่ได้รับผล”</div>';
+ rulePrev()}
+function rulePrev(){const p=$('#rprev'),m=$('#f_mode').value,t=(r,s)=>`${esc(fl(r.floor_id))} ${r.delta*s>0?'รถเข้า +':'รถออก −'}${Math.abs(r.delta)}`;
+ p.hidden=!rules.length;if(!rules.length)return;const dup=new Set(rules.map(r=>r.floor_id)).size<rules.length;
+ p.innerHTML=`<b>รถผ่าน A→B</b> → ${m=='BA'?'ไม่นับ':rules.map(r=>t(r,1)).join(', ')}<br><b>รถผ่าน B→A</b> → ${m=='AB'?'ไม่นับ':rules.map(r=>t(r,-1)).join(', ')}`+(dup?'<br><span style="color:var(--bad)">มีชั้นซ้ำ — รถ 1 คันจะถูกนับ 2 ครั้งในชั้นนั้น</span>':'')}
+$('#rules').onchange=e=>{const i=e.target.dataset.i;if(i==null)return;if(e.target.classList.contains('rf'))rules[i].floor_id=+e.target.value;else rules[i].delta=+e.target.value;renderRules()};
+$('#rules').onclick=e=>{const b=e.target.closest('.x');if(b){rules.splice(+b.dataset.i,1);renderRules()}};
+$('#addrule').onclick=()=>{const f=floors.find(f=>!rules.some(r=>r.floor_id==f.id))||floors[0];if(!f)return toast('ยังไม่มีชั้น เพิ่มชั้นก่อน');rules.push({floor_id:f.id,delta:1});renderRules()};
+$('#f_mode').onchange=rulePrev;
+$$('[data-tpl]').forEach(b=>b.onclick=()=>{const here=+$('#f_floor_id').value,i=floors.findIndex(f=>f.id==here),next=floors[i+1];if(i<0)return toast('เลือก “ติดตั้งอยู่ที่ชั้น” ก่อน');
+ if(b.dataset.tpl=='in')rules=[{floor_id:here,delta:1}];else if(b.dataset.tpl=='out')rules=[{floor_id:here,delta:-1}];
+ else{if(!next)return toast('ไม่มีชั้นถัดไป เพิ่มชั้นก่อน');rules=[{floor_id:here,delta:-1},{floor_id:next.id,delta:1}]}renderRules()});
+$('#simAB').onclick=()=>sim('AB');$('#simBA').onclick=()=>sim('BA');
+async function sim(dir){if(!await saveCam(true))return;try{await api(`/api/cameras/${sel}/simulate`,'POST',{direction:dir});toast(`จำลองรถผ่าน ${dir=='AB'?'A→B':'B→A'} แล้ว ดูผลที่ป้าย LED / Telegram`)}catch(e){toast(e.message)}}
+function shot(){const i=$('#snap');i.onload=draw;i.onerror=()=>{i.removeAttribute('src');draw()};if(sel)i.src=`/api/cameras/${sel}/snapshot?t=${Date.now()}`;else{i.removeAttribute('src');draw()}}
+function draw(){const c=$('#cnv'),r=$('#cv').getBoundingClientRect();c.width=r.width;c.height=Math.max(r.height,220);const g=c.getContext('2d'),W=c.width,H=c.height;g.clearRect(0,0,W,H);
+ if(!$('#snap').getAttribute('src')){g.fillStyle='#aab';g.font='14px sans-serif';g.fillText(sel?'ยังไม่มีภาพ รอกล้องออนไลน์แล้วกด “ถ่ายภาพใหม่”':'บันทึกกล้องก่อน แล้วจึงมีภาพให้ตีเส้น',14,26)}
+ const x1=line.x1*W,y1=line.y1*H,x2=line.x2*W,y2=line.y2*H;g.strokeStyle='#ffd400';g.lineWidth=3;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();
+ [[x1,y1],[x2,y2]].forEach(p=>{g.fillStyle='#ffd400';g.beginPath();g.arc(p[0],p[1],8,0,7);g.fill()});
+ const mx=(x1+x2)/2,my=(y1+y2)/2,dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L;g.strokeStyle=g.fillStyle='#4de1ff';g.lineWidth=3;g.beginPath();g.moveTo(mx,my);g.lineTo(mx+nx*60,my+ny*60);g.stroke();
+ g.beginPath();g.moveTo(mx+nx*60,my+ny*60);g.lineTo(mx+nx*46+ny*9,my+ny*46-nx*9);g.lineTo(mx+nx*46-ny*9,my+ny*46+nx*9);g.fill();g.font='bold 15px sans-serif';g.fillText('A→B',mx+nx*70-14,my+ny*70+5)}
+let drag=null;const cv=$('#cnv');
+cv.onpointerdown=e=>{const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;drag=Math.hypot(x-line.x1,y-line.y1)<Math.hypot(x-line.x2,y-line.y2)?1:2;cv.setPointerCapture(e.pointerId);mv(e)};
+cv.onpointermove=e=>{if(drag)mv(e)};cv.onpointerup=()=>drag=null;
+function mv(e){const r=cv.getBoundingClientRect();line['x'+drag]=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));line['y'+drag]=Math.min(1,Math.max(0,(e.clientY-r.top)/r.height));draw()}
+$('#flip').onclick=()=>{line={x1:line.x2,y1:line.y2,x2:line.x1,y2:line.y1};draw()};$('#reshot').onclick=shot;
+$('#newcam').onclick=()=>pick(null);$('#dclose').onclick=$('#dcancel').onclick=()=>$('#dlg').close();
+async function saveCam(quiet){const b={enabled:$('#f_enabled').checked,...line,rules};F.forEach(k=>{const v=$('#f_'+k).value;b[k]=['port','floor_id','conf','margin'].includes(k)?+v:v});
+ try{if(sel)await api('/api/cameras/'+sel,'PUT',b);else sel=(await api('/api/cameras','POST',b)).id;await load();if(!quiet)toast('บันทึกแล้ว');$('#dtitle').textContent='ตั้งค่ากล้อง · '+b.name;$('#delcam').style.visibility='visible';return true}catch(e){toast('บันทึกไม่สำเร็จ: '+e.message);return false}}
+$('#savecam').onclick=()=>saveCam();
+$('#delcam').onclick=async()=>{if(sel&&confirm('ลบกล้องนี้?')){await api('/api/cameras/'+sel,'DELETE');sel=null;$('#dlg').close();load()}};
+
+/* floors */
+function renderFloorTab(force=true){if(!force&&document.activeElement&&document.activeElement.closest('#ftab'))return;
+ $('#ftab').innerHTML='<tr><th>id</th><th>ชื่อชั้น</th><th>ที่จอดทั้งหมด</th><th>มีรถอยู่</th><th>ว่าง</th><th></th><th>กล้องที่นับชั้นนี้</th><th>ป้าย LED</th></tr>'+floors.map(f=>`<tr><td>${f.id}</td><td><input value="${esc(f.name)}" id="n${f.id}"></td><td><input type="number" value="${f.total}" id="t${f.id}"></td><td><input type="number" value="${f.occupied}" id="o${f.id}"></td><td><b>${f.free}</b></td><td style="white-space:nowrap"><button class="btn" onclick="saveFloor(${f.id})">บันทึก</button> <button class="btn del" onclick="delFloor(${f.id})">ลบ</button></td><td>${camChips(f.id)||'<span style="color:var(--bad)">ไม่มีกล้องนับ</span>'}</td><td>${ledsOnFloor(f.id).map(d=>`<span class="chip"><i class="dot ${d.online?'ok':'bad'}"></i>${esc(d.name)}</span>`).join('')||'<span style="color:var(--mute)">-</span>'}</td></tr>`).join('')}
+window.saveFloor=async id=>{await api('/api/floors/'+id,'PUT',{name:$('#n'+id).value,total:+$('#t'+id).value});await api(`/api/floors/${id}/occupied`,'POST',{occupied:+$('#o'+id).value});toast('บันทึกแล้ว')};
+window.delFloor=async id=>{if(confirm('ลบชั้นนี้?'))await api('/api/floors/'+id,'DELETE')};
+$('#addfloor').onclick=()=>api('/api/floors','POST',{name:'ชั้นใหม่',total:20});
+
+/* LED signs (ESP32) */
+const devText=d=>{const f=floors.find(x=>x.id==d.floor_id);if(!f)return'----';if(d.mode=='occupied')return String(Math.min(f.occupied,9999)).padStart(4);if(f.free==0&&d.full_text)return'FULL';return String(Math.min(f.free,9999)).padStart(4)};
+const sigBars=r=>{if(r==null)return'-';const n=r>=-55?4:r>=-67?3:r>=-75?2:1;return `<span class="sig" title="${r} dBm">${[4,7,10,13].map((h,i)=>`<i style="height:${h}px" class="${i<n?'on':''}"></i>`).join('')}</span> ${r} dBm`};
+const ago=t=>{if(!t)return'-';const s=Math.max(0,Math.round(Date.now()/1000-t));return s<60?s+' วิที่แล้ว':s<3600?Math.round(s/60)+' นาทีที่แล้ว':s<86400?Math.round(s/3600)+' ชม.ที่แล้ว':new Date(t*1000).toLocaleString('th-TH',{hour12:false})};
+const upt=s=>s==null?'-':s<3600?Math.floor(s/60)+' นาที':s<86400?Math.floor(s/3600)+' ชม. '+Math.floor(s%3600/60)+' นาที':Math.floor(s/86400)+' วัน '+Math.floor(s%86400/3600)+' ชม.';
+function camChips(fid){return cams.filter(c=>(c.rules||[]).some(r=>r.floor_id==fid)).map(c=>{const r=c.rules.find(r=>r.floor_id==fid);return `<span class="chip ${r.delta>0?'p':'m'}" title="เมื่อรถผ่าน A→B">📷 ${esc(c.name)} · ${r.delta>0?'เข้า':'ออก'}</span>`}).join('')}
+function renderLedTab(){const on=devs.filter(d=>d.online).length,off=devs.length-on;
+ $('#ledsum').innerHTML=`ป้ายทั้งหมด ${devs.length} · <span style="color:var(--ok)">ออนไลน์ ${on}</span>`+(off?` · <span style="color:var(--bad)">ออฟไลน์ ${off}</span>`:'');
+ $('#ltab').innerHTML='<tr><th>สถานะ</th><th>ชื่อป้าย</th><th>ชั้น</th><th>ค่าที่แสดง</th><th>กล้องที่ส่งผล</th><th>IP / สัญญาณ</th><th>Device ID</th><th></th></tr>'+(devs.map(d=>`<tr class="${d.floor_id?'':'new'}">
+  <td style="white-space:nowrap"><i class="dot ${d.online?'ok':'bad'}"></i> ${d.online?'ออนไลน์'+(d.rtt!=null?` · ${d.rtt} ms`:''):'ออฟไลน์<br><small style="color:var(--mute)">'+ago(d.last_seen)+'</small>'}</td>
+  <td><b>${esc(d.name)}</b>${d.floor_id?'':'<br><span class="chip" style="background:#fff3c4">ใหม่ · ยังไม่กำหนดชั้น</span>'}</td><td>${d.floor_id?esc(fl(d.floor_id)):'-'}</td>
+  <td><span class="alnum ${d.online?'':'off'}">${esc(devText(d))}</span><br><small style="color:var(--mute)">${d.mode=='occupied'?'จำนวนรถ':'ที่ว่าง'} · สว่าง ${d.brightness}/15</small></td>
+  <td>${d.floor_id?camChips(d.floor_id)||'<span style="color:var(--bad)">ยังไม่มีกล้องส่งผล</span>':'-'}</td>
+  <td>${esc(d.ip||'-')}<br>${d.online?sigBars(d.rssi):''}</td><td><code>${esc(d.id)}</code><br><small style="color:var(--mute)">FW ${esc(d.fw||'-')}</small></td>
+  <td style="white-space:nowrap"><button class="btn sec sm" ${d.online?'':'disabled'} onclick="devPing('${d.id}',this)">ทดสอบ</button> <button class="btn sm" onclick="pickDev('${d.id}')">ตั้งค่า</button></td></tr>`).join('')
+  ||'<tr><td colspan="8" style="color:var(--mute);padding:20px">ยังไม่มีป้าย LED เชื่อมต่อเข้ามา — แฟลชเฟิร์มแวร์ (ดูวิธีด้านล่าง) แล้วเปิดเครื่อง ป้ายจะขึ้นที่นี่อัตโนมัติ</td></tr>');
+ if(!devs.length)$('#ledhelp').open=true}
+window.devPing=async(id,b)=>{const t=b.textContent;b.disabled=true;b.textContent='กำลังทดสอบ…';const r=await api(`/api/devices/${id}/ping`,'POST').catch(e=>({ok:false,error:e.message}));
+ b.textContent=r.ok?`✓ ${r.rtt_ms} ms`:'✗ ล้มเหลว';toast(r.ok?`เชื่อมต่อได้ ตอบกลับใน ${r.rtt_ms} ms`:r.error);setTimeout(()=>{b.textContent=t;b.disabled=false},2500)};
+window.pickDev=id=>{const d=devs.find(x=>x.id==id);if(!d)return;dsel=id;$('#ddtitle').textContent='ตั้งค่าป้าย LED · '+d.name;
+ $('#d_floor_id').innerHTML='<option value="">— ยังไม่กำหนด —</option>'+floors.map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('');
+ $('#d_name').value=d.name;$('#d_floor_id').value=d.floor_id??'';$('#d_mode').value=d.mode;$('#d_brightness').value=d.brightness;$('#d_bv').textContent=d.brightness;$('#d_full_text').checked=!!d.full_text;
+ $('#d_pres').textContent=$('#d_tres').textContent='';updDevDlg();$('#ddlg').showModal()};
+function updDevDlg(){const d=devs.find(x=>x.id==dsel);if(!d)return;const fid=+$('#d_floor_id').value||null;
+ $('#d_now').textContent=d.online?devText(d):'OFF';$('#d_now').className='alnum'+(d.online?'':' off');
+ $('#d_cams').innerHTML=fid?(camChips(fid)||'<div class="note warn">ยังไม่มีกล้องที่ส่งผลต่อชั้นนี้ — ไปที่แท็บ กล้อง > ตั้งค่า แล้วเพิ่มชั้นนี้ใน “ผลเมื่อรถผ่าน”</div>'):'<div class="note">เลือกชั้นที่ป้ายนี้จะแสดงผลก่อน</div>';
+ $('#d_info').innerHTML=[['สถานะ',d.online?'<span style="color:var(--ok)">● ออนไลน์</span>':`<span style="color:var(--bad)">● ออฟไลน์</span> (ล่าสุด ${ago(d.last_seen)})`],['Device ID',`<code>${esc(d.id)}</code>`],['IP',esc(d.ip||'-')],['สัญญาณ WiFi',d.online?sigBars(d.rssi):'-'],['เปิดเครื่องมาแล้ว',d.online?upt(d.uptime):'-'],['หน่วงล่าสุด',d.rtt!=null?d.rtt+' ms':'-'],['เฟิร์มแวร์',esc(d.fw||'-')]].map(([k,v])=>`<span>${k}</span><b>${v}</b>`).join('');
+ ['d_ping','d_ident','d_tsend'].forEach(i=>$('#'+i).disabled=!d.online);$$('[data-tt]').forEach(b=>b.disabled=!d.online)}
+$('#d_floor_id').onchange=updDevDlg;$('#d_brightness').oninput=e=>$('#d_bv').textContent=e.target.value;
+$('#d_ping').onclick=async()=>{const r=$('#d_pres');r.className='res';r.textContent='กำลังทดสอบ…';const x=await api(`/api/devices/${dsel}/ping`,'POST').catch(e=>({ok:false,error:e.message}));
+ r.className='res '+(x.ok?'ok':'bad');r.textContent=x.ok?`✓ เชื่อมต่อได้ ตอบกลับใน ${x.rtt_ms} ms · สัญญาณ ${x.rssi??'-'} dBm`:'✗ '+x.error;if(x.ok)refreshState()};
+$('#d_ident').onclick=()=>api(`/api/devices/${dsel}/identify`,'POST').then(()=>toast('ป้ายกำลังกะพริบรหัส '+dsel.slice(-4))).catch(e=>toast(e.message));
+async function devTest(text){const r=$('#d_tres');try{await api(`/api/devices/${dsel}/test`,'POST',{text,seconds:+$('#d_tsec').value||5});r.className='res ok';r.textContent=`✓ ส่ง “${text.trim()}” แล้ว ตรวจดูที่ป้าย`}catch(e){r.className='res bad';r.textContent='✗ '+e.message}}
+$('#d_tsend').onclick=()=>devTest($('#d_ttext').value);$$('[data-tt]').forEach(b=>b.onclick=()=>devTest(b.dataset.tt));
+$('#d_save').onclick=async()=>{try{await api('/api/devices/'+dsel,'PUT',{name:$('#d_name').value,floor_id:+$('#d_floor_id').value||null,mode:$('#d_mode').value,brightness:+$('#d_brightness').value,full_text:$('#d_full_text').checked});
+ toast('บันทึกแล้ว ป้ายอัปเดตทันที');$('#ddtitle').textContent='ตั้งค่าป้าย LED · '+$('#d_name').value;await refreshState()}catch(e){toast('บันทึกไม่สำเร็จ: '+e.message)}};
+$('#d_del').onclick=async()=>{if(confirm('ลบป้ายนี้ออกจากระบบ?\n(ถ้าป้ายยังเปิดอยู่ จะกลับเข้ามาเป็นป้ายใหม่อีกครั้ง)')){await api('/api/devices/'+dsel,'DELETE');$('#ddlg').close();refreshState()}};
+$('#ddclose').onclick=$('#d_cancel').onclick=()=>$('#ddlg').close();
+$('#dlfw').onclick=async()=>{if(!$('#fw_ssid').value&&!confirm('ยังไม่ได้กรอก WiFi — ดาวน์โหลดแล้วไปแก้ในไฟล์เองใช่ไหม?'))return;
+ const r=await fetch('/api/firmware',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ssid:$('#fw_ssid').value,password:$('#fw_pass').value})});
+ if(!r.ok)return toast('ดาวน์โหลดไม่สำเร็จ');const a=document.createElement('a');a.href=URL.createObjectURL(await r.blob());a.download='esp32_display.ino';a.click()};
+$('#savetoken').onclick=async()=>{try{settings=await api('/api/settings','PUT',{device_token:$('#s_devtoken').value});$('#s_devtoken').value=settings.device_token;toast('บันทึกรหัสอุปกรณ์แล้ว — แฟลชเฟิร์มแวร์ใหม่ให้ทุกป้าย')}catch(e){toast(e.message)}};
+
+/* Telegram */
+async function loadSettings(){const s=settings=await api('/api/settings');$('#tg_enabled').checked=s.tg_enabled;$('#tg_token').value='';
+ $('#tg_token').placeholder=s.tg_token_set?`บันทึกแล้ว ${s.tg_token_hint} (เว้นว่าง = ใช้ค่าเดิม)`:'123456789:AAH...';
+ $('#tg_chat').value=s.tg_chat;$('#tg_mode').value=s.tg_mode;$('#tg_merge').value=s.tg_merge;$('#tg_silent').checked=s.tg_silent;$('#s_devtoken').value=s.device_token;
+ $('#fw_host').value=(['localhost','127.0.0.1','[::1]'].includes(location.hostname)?s.server_ip:location.hostname)+':'+(location.port||80)}
+async function loadPreview(){try{const p=await api('/api/telegram/preview'),m=$('#tg_mode').value;$('#tg_prev').innerHTML=(m!='live'?`<div class="tgb">${p.event}</div>`:'')+(m!='event'?`<div class="tgb">📌 ${p.live}</div>`:'')}catch(e){}}
+const tgRes=(ok,h)=>{const r=$('#tg_res');r.className='res '+(ok?'ok':'bad');r.innerHTML=h};
+$('#tg_mode').onchange=loadPreview;
+$('#tg_save').onclick=async()=>{try{await api('/api/settings','PUT',{tg_enabled:$('#tg_enabled').checked,tg_token:$('#tg_token').value.trim(),tg_chat:$('#tg_chat').value,tg_mode:$('#tg_mode').value,tg_merge:+$('#tg_merge').value||0,tg_silent:$('#tg_silent').checked});
+ await loadSettings();tgRes(true,'กำลังตรวจสอบบอท…');const i=await api('/api/telegram/info');tgRes(i.ok,i.ok?`✓ บันทึกแล้ว · บอท @${esc(i.bot)}`+(settings.tg_chat?'':' — ใส่ Chat ID ต่อ'):'บันทึกแล้ว แต่ '+esc(i.error))}catch(e){tgRes(false,esc(e.message))}};
+$('#tg_test').onclick=async()=>{tgRes(true,'กำลังส่ง…');try{const r=await api('/api/telegram/test','POST');tgRes(r.results.every(x=>x.ok),r.results.map(x=>`${x.ok?'✓':'✗'} ${esc(x.chat)} — ${x.ok?'ส่งสำเร็จ':esc(x.error)}`).join('<br>'))}catch(e){tgRes(false,esc(e.message))}};
+$('#tg_find').onclick=async()=>{tgRes(true,'กำลังค้นหา…');const i=await api('/api/telegram/info').catch(e=>({ok:false,error:e.message}));if(!i.ok)return tgRes(false,esc(i.error));
+ if(!i.chats.length)return tgRes(false,`ยังไม่พบห้องแชท — เพิ่ม @${esc(i.bot)} เข้ากลุ่ม แล้วพิมพ์ /start ในกลุ่ม จากนั้นกดค้นหาอีกครั้ง`);
+ tgRes(true,'พบห้องแชท (กดเพื่อเพิ่ม): '+i.chats.map(c=>`<button class="btn sec sm" onclick="addChat('${esc(c.id)}')">${esc(c.name||c.type)} · ${esc(c.id)}</button>`).join(' '))};
+window.addChat=id=>{const v=$('#tg_chat').value.split(',').map(s=>s.trim()).filter(Boolean);if(!v.includes(id))v.push(id);$('#tg_chat').value=v.join(', ');toast('เพิ่ม Chat ID แล้ว กด “บันทึก”')};
+
+/* boot */
+function renderAll(){renderSigns();renderTree();renderWall();renderOv();renderFloorTab();renderCamTab();renderLedTab();$('#r_floor').innerHTML='<option value="">ทุกชั้น</option>'+floors.map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('')}
+async function load(){const s=await api('/api/state');floors=s.floors;cams=s.cameras;devs=s.devices;evs=await api('/api/events?limit=1000');renderAll()}
+async function refreshState(){try{const s=await api('/api/state');cams=s.cameras;devs=s.devices;renderWall();renderTree();if(!$('#dlg').open)renderCamTab();renderLedTab();renderFloorTab(false);if($('#ddlg').open)updDevDlg()}catch(e){}}
+function connect(){const w=new WebSocket((location.protocol=='https:'?'wss://':'ws://')+location.host+'/ws');
+ w.onopen=()=>{$('#ws').textContent='● เชื่อมต่อสด';$('#ws').className='ok'};
+ w.onclose=()=>{$('#ws').textContent='หลุดการเชื่อมต่อ กำลังต่อใหม่…';$('#ws').className='';setTimeout(connect,2000)};
+ w.onmessage=m=>{const d=JSON.parse(m.data);if(d.type=='devices')return refreshState();floors=d.floors;renderSigns();renderTree();renderOv();renderFloorTab(false);renderLedTab();if($('#ddlg').open)updDevDlg();
+  if(d.type=='count'){d.changes.forEach(c=>evs.unshift({ts:d.ts,delta:c.delta,floor_id:c.floor_id,cname:d.camera,cls:d.cls,occupied:c.occupied}));flash(d);feed(d)}}}
+load();connect();loadSettings().catch(()=>{});
+setInterval(refreshState,4000);
+</script></body></html>

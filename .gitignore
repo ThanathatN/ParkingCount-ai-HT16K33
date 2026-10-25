@@ -1,0 +1,16 @@
+# Hikvision HCNetSDK binaries (DLL) - ไม่เก็บลง git ให้ดาวน์โหลดจาก Hikvision แล้ววางเอง
+hiksdk/lib/
+
+# Python virtual env / cache
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# ฐานข้อมูล (มีรหัสกล้อง / Telegram token) - server.py สร้างใหม่ให้อัตโนมัติ
+parking.db
+*.db-journal
+
+# โมเดลอื่นที่ ultralytics ดาวน์โหลดมาเพิ่ม (yolov8n.pt เก็บไว้ใน repo)
+*.pt
+!yolov8n.pt
